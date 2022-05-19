@@ -1,5 +1,6 @@
-use cosmwasm_std::{Addr, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 use cw_storage_plus::Item;
+use cw_utils::Expiration;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -10,7 +11,7 @@ pub struct Stake {
     /// Validator to stake to
     pub validator: Addr,
     /// Time when lockup period ends
-    pub end_time: Timestamp,
+    pub end_time: Expiration,
     /// Amount of tokens to stake
     pub amount: Uint128,
     /// This is the minimum amount we will pull out to reinvest + claim

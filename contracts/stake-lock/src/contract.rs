@@ -5,7 +5,7 @@ use cosmwasm_std::{
     DistributionMsg, Env, MessageInfo, Response, StakingMsg, StdResult, WasmMsg,
 };
 use cw2::set_contract_version;
-use cw_utils::{must_pay, nonpayable};
+use cw_utils::{must_pay, nonpayable, Expiration};
 use sg_std::NATIVE_DENOM;
 
 use crate::error::ContractError;
@@ -28,7 +28,7 @@ pub fn instantiate(
     let stake = Stake {
         owner: info.sender.clone(),
         validator: deps.api.addr_validate(&msg.validator)?,
-        // end_time: env.block.time.plus_seconds(msg.min_duration),
+        end_time: (Expiration::AtTime(env.block.time) + msg.min_duration)?,
         amount: must_pay(&info, NATIVE_DENOM)?,
         min_withdrawal: msg.min_withdrawal,
     };
@@ -76,7 +76,7 @@ pub fn execute_unbond(
     }
     STAKE.remove(deps.storage);
 
-    if env.block.time < stake.end_time {
+    if !stake.end_time.is_expired(&env.block) {
         return Err(ContractError::StakeNotExpired {});
     }
 

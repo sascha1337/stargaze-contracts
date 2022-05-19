@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     coin, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Decimal, Deps, DepsMut, Empty, Env,
-    MessageInfo, Order, Reply, ReplyOn, StdError, StdResult, Timestamp, WasmMsg,
+    MessageInfo, Order, Reply, ReplyOn, StdError, StdResult, Timestamp, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw721_base::{msg::ExecuteMsg as Cw721ExecuteMsg, MintMsg};
@@ -32,6 +32,7 @@ const CONTRACT_NAME: &str = "crates.io:sg-minter";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const INSTANTIATE_SG721_REPLY_ID: u64 = 1;
+const INSTANTIATE_STAKELOCK_REPLY_ID: u64 = 2;
 
 // minter gov parameters
 const MAX_TOKEN_LIMIT: u32 = 10000;
@@ -44,6 +45,7 @@ const AIRDROP_MINT_FEE_PERCENT: u32 = 100;
 // stake-lock gov params
 const CLAIM_LIQUID_BPS: u64 = 3333;
 const MIN_STAKE_DURATION: u64 = 123124;
+const MIN_REINVEST_AMOUNT: u128 = 5_000_000;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -218,41 +220,35 @@ pub fn execute_claim_and_stake(
     let liquid_amount = balance.amount * Decimal::percent(CLAIM_LIQUID_BPS);
     let send_msg = CosmosMsg::Bank(BankMsg::Send {
         to_address: info.sender.to_string(),
-        amount: vec![coin(liquid_amount.u128(), balance.denom)],
+        amount: vec![coin(liquid_amount.u128(), balance.clone().denom)],
     });
 
     // init stakelock contract
-    let msg = StakeLockInitMsg {
+    let stakelock_init_msg = StakeLockInitMsg {
         validator,
-        min_duration: todo!(),
-        min_withdrawal: todo!(),
+        min_duration: cw_utils::Duration::Time(MIN_STAKE_DURATION),
+        min_withdrawal: Uint128::from(MIN_REINVEST_AMOUNT),
     };
 
     // submessage to instantiate stake-lock contract
-    // let msg = SubMsg {
-    //     msg: WasmMsg::Instantiate {
-    //         code_id: stakelock_code_id,
-    //         msg: to_binary(&Sg721InstantiateMsg {
-    //             name: msg.sg721_instantiate_msg.name,
-    //             symbol: msg.sg721_instantiate_msg.symbol,
-    //             minter: env.contract.address.to_string(),
-    //             collection_info: msg.sg721_instantiate_msg.collection_info,
-    //         })?,
-    //         funds: info.funds,
-    //         admin: Some(info.sender.to_string()),
-    //         label: String::from("Fixed price minter"),
-    //     }
-    //     .into(),
-    //     id: INSTANTIATE_SG721_REPLY_ID,
-    //     gas_limit: None,
-    //     reply_on: ReplyOn::Success,
-    // };
-
-    // create reply submsg for stake-lock
+    let msg = SubMsg {
+        msg: WasmMsg::Instantiate {
+            code_id: stakelock_code_id,
+            msg: to_binary(&stakelock_init_msg)?,
+            funds: vec![coin((balance.amount - liquid_amount).u128(), balance.denom)],
+            admin: Some(info.sender.to_string()),
+            label: String::from("Stake-lock via minter"),
+        }
+        .into(),
+        id: INSTANTIATE_STAKELOCK_REPLY_ID,
+        gas_limit: None,
+        reply_on: ReplyOn::Success,
+    };
 
     Ok(Response::default()
-        .add_attribute("action", "withdraw")
-        .add_message(send_msg))
+        .add_attribute("action", "claim_and_stake")
+        .add_message(send_msg)
+        .add_submessage(msg))
 }
 
 // TODO: in reply
