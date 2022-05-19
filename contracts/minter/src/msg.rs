@@ -20,12 +20,32 @@ pub struct InstantiateMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Mint {},
-    SetWhitelist { whitelist: String },
+    SetWhitelist {
+        whitelist: String,
+    },
     UpdateStartTime(Timestamp),
-    UpdatePerAddressLimit { per_address_limit: u32 },
-    MintTo { recipient: String },
-    MintFor { token_id: u32, recipient: String },
-    Withdraw {},
+    UpdatePerAddressLimit {
+        per_address_limit: u32,
+    },
+    MintTo {
+        recipient: String,
+    },
+    MintFor {
+        token_id: u32,
+        recipient: String,
+    },
+    /// Claim 33% mint fees and stake the rest to a validator
+    ClaimAndStake {},
+    /// Redelegate stake from one validator to another
+    Redelegate {
+        dst_validator: String,
+    },
+    /// Withdraw staking rewards and re-delegate
+    Reinvest {},
+    /// Starts the unbonding process
+    Unbond {},
+    /// Claim final balance from the contract
+    ClaimAll {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

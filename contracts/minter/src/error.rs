@@ -30,6 +30,9 @@ pub enum ContractError {
     #[error("Sold out")]
     SoldOut {},
 
+    #[error("Not sold out")]
+    NotSoldOut {},
+
     #[error("InvalidDenom {expected} got {got}")]
     InvalidDenom { expected: String, got: String },
 

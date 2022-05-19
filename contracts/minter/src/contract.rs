@@ -38,8 +38,8 @@ const MAX_PER_ADDRESS_LIMIT: u32 = 50;
 const MIN_MINT_PRICE: u128 = 50_000_000;
 const AIRDROP_MINT_PRICE: u128 = 15_000_000;
 const MINT_FEE_PERCENT: u32 = 10;
-// 100% airdrop fee goes to fair burn
 const AIRDROP_MINT_FEE_PERCENT: u32 = 100;
+const CLAIM_LIQUID_BPS: u64 = 3333;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -174,11 +174,11 @@ pub fn execute(
         ExecuteMsg::SetWhitelist { whitelist } => {
             execute_set_whitelist(deps, env, info, &whitelist)
         }
-        ExecuteMsg::Withdraw {} => execute_withdraw(deps, env, info),
+        ExecuteMsg::ClaimAndStake {} => execute_claim_and_stake(deps, env, info),
     }
 }
 
-pub fn execute_withdraw(
+pub fn execute_claim_and_stake(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -190,7 +190,14 @@ pub fn execute_withdraw(
         ));
     };
 
-    // query balance from the contract
+    // TODO: fail if this has already been run
+    // i.e: check if stake-lock exists
+
+    // make sure collection is sold out
+    if MINTABLE_NUM_TOKENS.load(deps.storage)? > 0 {
+        return Err(ContractError::NotSoldOut {});
+    };
+
     let balance = deps
         .querier
         .query_balance(env.contract.address, NATIVE_DENOM)?;
@@ -198,16 +205,23 @@ pub fn execute_withdraw(
         return Err(ContractError::ZeroBalance {});
     }
 
-    // send contract balance to creator
+    // send liquid funds to creator
+    let liquid_amount = balance.amount * Decimal::percent(CLAIM_LIQUID_BPS);
     let send_msg = CosmosMsg::Bank(BankMsg::Send {
         to_address: info.sender.to_string(),
-        amount: vec![balance],
+        amount: vec![coin(liquid_amount.u128(), balance.denom)],
     });
+
+    // instantiate stake-lock contract
+    // create reply submsg for stake-lock
 
     Ok(Response::default()
         .add_attribute("action", "withdraw")
         .add_message(send_msg))
 }
+
+// TODO: in reply
+// minter <> stake-lock map
 
 pub fn execute_set_whitelist(
     deps: DepsMut,
