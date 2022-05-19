@@ -54,6 +54,7 @@ sg-std = "0.10.0"
 whitelist = { path = "../whitelist", features = ["library"] }
 cw721 = "0.13.1"
 cw721-base = { version = "0.13.1", features = ["library"] }
+stake-lock = { path = "../stake-lock", features = ["library"] }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0-beta7" }

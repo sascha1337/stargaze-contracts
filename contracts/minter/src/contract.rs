@@ -8,6 +8,7 @@ use cw2::set_contract_version;
 use cw721_base::{msg::ExecuteMsg as Cw721ExecuteMsg, MintMsg};
 use cw_utils::{may_pay, parse_reply_instantiate_data};
 use sg721::msg::InstantiateMsg as Sg721InstantiateMsg;
+use stake_lock::msg::InstantiateMsg as StakeLockInitMsg;
 use url::Url;
 
 use crate::error::ContractError;
@@ -32,14 +33,17 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const INSTANTIATE_SG721_REPLY_ID: u64 = 1;
 
-// governance parameters
+// minter gov parameters
 const MAX_TOKEN_LIMIT: u32 = 10000;
 const MAX_PER_ADDRESS_LIMIT: u32 = 50;
 const MIN_MINT_PRICE: u128 = 50_000_000;
 const AIRDROP_MINT_PRICE: u128 = 15_000_000;
 const MINT_FEE_PERCENT: u32 = 10;
 const AIRDROP_MINT_FEE_PERCENT: u32 = 100;
+
+// stake-lock gov params
 const CLAIM_LIQUID_BPS: u64 = 3333;
+const MIN_STAKE_DURATION: u64 = 123124;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -174,7 +178,10 @@ pub fn execute(
         ExecuteMsg::SetWhitelist { whitelist } => {
             execute_set_whitelist(deps, env, info, &whitelist)
         }
-        ExecuteMsg::ClaimAndStake {} => execute_claim_and_stake(deps, env, info),
+        ExecuteMsg::ClaimAndStake {
+            stakelock_code_id,
+            validator,
+        } => execute_claim_and_stake(deps, env, info, stakelock_code_id, validator),
     }
 }
 
@@ -182,6 +189,8 @@ pub fn execute_claim_and_stake(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
+    stakelock_code_id: u64,
+    validator: String,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     if config.admin != info.sender {
@@ -212,7 +221,33 @@ pub fn execute_claim_and_stake(
         amount: vec![coin(liquid_amount.u128(), balance.denom)],
     });
 
-    // instantiate stake-lock contract
+    // init stakelock contract
+    let msg = StakeLockInitMsg {
+        validator,
+        min_duration: todo!(),
+        min_withdrawal: todo!(),
+    };
+
+    // submessage to instantiate stake-lock contract
+    // let msg = SubMsg {
+    //     msg: WasmMsg::Instantiate {
+    //         code_id: stakelock_code_id,
+    //         msg: to_binary(&Sg721InstantiateMsg {
+    //             name: msg.sg721_instantiate_msg.name,
+    //             symbol: msg.sg721_instantiate_msg.symbol,
+    //             minter: env.contract.address.to_string(),
+    //             collection_info: msg.sg721_instantiate_msg.collection_info,
+    //         })?,
+    //         funds: info.funds,
+    //         admin: Some(info.sender.to_string()),
+    //         label: String::from("Fixed price minter"),
+    //     }
+    //     .into(),
+    //     id: INSTANTIATE_SG721_REPLY_ID,
+    //     gas_limit: None,
+    //     reply_on: ReplyOn::Success,
+    // };
+
     // create reply submsg for stake-lock
 
     Ok(Response::default()

@@ -13,7 +13,7 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, StakeResponse};
 use crate::state::{Stake, STAKE};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:sg-timelocked-stake";
+const CONTRACT_NAME: &str = "crates.io:sg-stake-lock";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -28,7 +28,7 @@ pub fn instantiate(
     let stake = Stake {
         owner: info.sender.clone(),
         validator: deps.api.addr_validate(&msg.validator)?,
-        end_time: env.block.time.plus_seconds(msg.min_duration),
+        // end_time: env.block.time.plus_seconds(msg.min_duration),
         amount: must_pay(&info, NATIVE_DENOM)?,
         min_withdrawal: msg.min_withdrawal,
     };

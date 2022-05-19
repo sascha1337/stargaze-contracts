@@ -1,5 +1,5 @@
 [package]
-name = "timelocked-stake"
+name = "stake-lock"
 version = "0.1.0"
 authors = ["Shane Vitarana <s@noreply.publicawesome.com>"]
 edition = "2018"

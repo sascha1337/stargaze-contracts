@@ -1,4 +1,5 @@
 use cosmwasm_std::Uint128;
+use cw_utils::Duration;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +12,7 @@ pub struct InstantiateMsg {
     /// Address of validator to stake to
     pub validator: String,
     /// During of timelock
-    pub min_duration: u64,
+    pub min_duration: Duration,
     /// This is the minimum amount we will pull out to reinvest + claim
     pub min_withdrawal: Uint128,
 }

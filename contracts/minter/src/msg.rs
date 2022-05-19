@@ -35,7 +35,10 @@ pub enum ExecuteMsg {
         recipient: String,
     },
     /// Claim 33% mint fees and stake the rest to a validator
-    ClaimAndStake {},
+    ClaimAndStake {
+        stakelock_code_id: u64,
+        validator: String,
+    },
     /// Redelegate stake from one validator to another
     Redelegate {
         dst_validator: String,
